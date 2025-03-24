@@ -10,7 +10,6 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "faunadb": "^4.8.2",
     "mongodb": "^6.15.0"
   }
 }

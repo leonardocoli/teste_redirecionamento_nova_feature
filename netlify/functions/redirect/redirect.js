@@ -1,47 +1,51 @@
-const { MongoClient } = require('mongodb');
+const { MongoClient, ServerApiVersion } = require('mongodb');
 
 const uri = process.env.MONGODB_URI; // Sua string de conexão estará aqui
 
-const client = new MongoClient(uri);
+// Create a MongoClient with a MongoClientOptions object to set the Stable API version
+const client = new MongoClient(uri, {
+  serverApi: {
+    version: ServerApiVersion.v1,
+    strict: true,
+    deprecationErrors: true,
+  }
+});
 
 exports.handler = async (event, context) => {
   try {
     await client.connect();
+
+    // *** SEU CÓDIGO PARA INTERAGIR COM O BANCO DE DADOS VAI AQUI ***
     const db = client.db('leads'); // Nome do seu banco de dados
     const counterCollection = db.collection('vendor_counter'); // Nome da sua coleção
 
-    // Buscar o contador atual
-    const counterDoc = await counterCollection.findOneAndUpdate(
+    // Exemplo: Buscar um documento e incrementá-lo
+    const findResult = await counterCollection.findOneAndUpdate(
       { type: 'single' },
       { $inc: { index: 1 } },
       { upsert: true, returnDocument: 'after' }
     );
 
-    const whatsappNumbers = [
-      "554896063646", // Vendedor 1
-      "554899517399"   // Vendedor 2
-    ];
-
-    const nextIndex = (counterDoc.value.index - 1) % whatsappNumbers.length; // Subtrai 1 porque o índice foi incrementado antes de pegar o valor
-    const whatsappNumber = whatsappNumbers[nextIndex];
-    const message = "Opa! Vim pela Bio do instagram, gostaria de saber mais como vocês podem me ajudar!";
-    const encodedMessage = encodeURIComponent(message);
-    const whatsappURL = `https://wa.me/${whatsappNumber}?text=${encodedMessage}`;
+    const currentIndex = findResult.value ? findResult.value.index : 1;
+    const redirectTo = `/redirect-to-${currentIndex % 2 === 0 ? 'whatsapp1' : 'whatsapp2'}`;
 
     return {
       statusCode: 302,
       headers: {
-        Location: whatsappURL,
+        Location: redirectTo,
       },
-      body: '',
     };
-  } catch (error) {
-    console.error("Erro ao conectar ou interagir com o MongoDB:", error);
+
+  } catch (e) {
+    console.error("Erro ao conectar ou interagir com o MongoDB:", e);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: 'Erro ao processar a requisição com MongoDB.' }),
+      body: JSON.stringify({ message: "Erro ao processar sua requisição." }),
     };
   } finally {
     await client.close();
   }
 };
+
+// (Remova a chamada da função run() que estava no sample code original,
+// pois o Netlify chamará a função handler automaticamente)
