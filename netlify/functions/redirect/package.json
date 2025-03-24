@@ -1,0 +1,15 @@
+{
+  "name": "redirect",
+  "version": "1.0.0",
+  "main": "redirect.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "faunadb": "^4.8.2"
+  }
+}

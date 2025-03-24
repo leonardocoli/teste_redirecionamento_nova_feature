@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Redirecionamento para WhatsApp</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #25D366, #128C7E);
+            color: white;
+            text-align: center;
+        }
+        .container {
+            max-width: 600px;
+            padding: 20px;
+        }
+        h1 {
+            margin-bottom: 20px;
+        }
+        .loader {
+            border: 5px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 5px solid white;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .button {
+            background-color: white;
+            color: #128C7E;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 20px;
+            text-decoration: none;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Floripa Calistenia</h1>
+        <p>Você será redirecionado para um de nossos consultores em instantes...</p>
+        <div class="loader"></div>
+        <div id="redirect-message"></div>
+        <a href="#" id="manual-redirect" class="button" style="display: none;">Clique aqui se não for redirecionado automaticamente</a>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const redirectMessage = document.getElementById('redirect-message');
+            const manualRedirect = document.getElementById('manual-redirect');
+
+            const redirectURL = '/.netlify/functions/redirect';
+
+            redirectMessage.textContent = "Redirecionando...";
+
+            fetch(redirectURL)
+                .then(response => {
+                    if (response.redirected) {
+                        window.location.href = response.url;
+                    } else {
+                        return response.text();
+                    }
+                })
+                .then(data => {
+                    if (data) {
+                        console.log("URL de redirecionamento manual:", data);
+                        manualRedirect.href = data;
+                        manualRedirect.style.display = 'inline-block';
+                        redirectMessage.textContent = "Houve um problema no redirecionamento automático.";
+                    }
+                })
+                .catch(error => {
+                    console.error("Erro ao buscar o URL de redirecionamento:", error);
+                    redirectMessage.textContent = "Erro ao redirecionar.";
+                    manualRedirect.style.display = 'inline-block';
+                });
+        });
+    </script>
+</body>
+</html>
