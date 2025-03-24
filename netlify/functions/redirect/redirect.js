@@ -1,86 +1,47 @@
+const { MongoClient } = require('mongodb');
 
-const faunadb = require('faunadb');
-const q = faunadb.query;
+const uri = process.env.MONGODB_URI; // Sua string de conexão estará aqui
 
-exports.handler = async function(event, context) {
-  // Configurar cliente FaunaDB
-  const client = new faunadb.Client({
-    secret: process.env.FAUNADB_SERVER_SECRET
-  });
+const client = new MongoClient(uri);
 
-  const whatsappNumbers = [
-    "554896063646", // Vendedor 1
-    "554899517399"  // Vendedor 2
-  ];
-
+exports.handler = async (event, context) => {
   try {
+    await client.connect();
+    const db = client.db('leads'); // Nome do seu banco de dados
+    const counterCollection = db.collection('vendor_counter'); // Nome da sua coleção
+
     // Buscar o contador atual
-    const result = await client.query(
-      q.Get(
-        q.Match(q.Index('last_vendor_index'), 'single')
-      )
+    const counterDoc = await counterCollection.findOneAndUpdate(
+      { type: 'single' },
+      { $inc: { index: 1 } },
+      { upsert: true, returnDocument: 'after' }
     );
 
-    // Obter o índice atual
-    const currentIndex = result.data.index;
+    const whatsappNumbers = [
+      "554896063646", // Vendedor 1
+      "554899517399"   // Vendedor 2
+    ];
 
-    // Calcular o próximo índice (alternar entre 0 e o número de vendedores)
-    const nextIndex = (currentIndex + 1) % whatsappNumbers.length;
-
-    // Atualizar o documento com o próximo índice
-    await client.query(
-      q.Update(
-        result.ref,
-        { data: { index: nextIndex } }
-      )
-    );
-
-    const whatsappNumber = whatsappNumbers[currentIndex]; // Usar o índice ANTES da atualização para o redirecionamento atual
-    const message = "Opa! Vim pela Bio do instagram, gostaria de saber mais como vocês podem me ajudar!";
+    const nextIndex = (counterDoc.value.index - 1) % whatsappNumbers.length; // Subtrai 1 porque o índice foi incrementado antes de pegar o valor
+    const whatsappNumber = whatsappNumbers[nextIndex];
+    const message = "Opa! Vim pela Bio do instagram, gostaria de saber mais como vocês podem me ajudar!";
     const encodedMessage = encodeURIComponent(message);
     const whatsappURL = `https://wa.me/${whatsappNumber}?text=${encodedMessage}`;
 
     return {
-      statusCode: 302, // Redirecionamento temporário
+      statusCode: 302,
       headers: {
         Location: whatsappURL,
       },
       body: '',
     };
   } catch (error) {
-    // Se o índice não existir, cria um novo começando com o primeiro vendedor
-    if (error.requestResult && error.requestResult.statusCode === 404) {
-      try {
-        await client.query(
-          q.Create(
-            q.Collection('vendor_counter'),
-            { data: { type: 'single', index: 0 } }
-          )
-        );
-        const whatsappNumber = whatsappNumbers[0];
-        const message = "Opa! Vim pela Bio do instagram, gostaria de saber mais como vocês podem me ajudar!";
-        const encodedMessage = encodeURIComponent(message);
-        const whatsappURL = `https://wa.me/${whatsappNumber}?text=${encodedMessage}`;
-        return {
-          statusCode: 302,
-          headers: {
-            Location: whatsappURL,
-          },
-          body: '',
-        };
-      } catch (createError) {
-        console.error("Erro ao criar o contador:", createError);
-        return {
-          statusCode: 500,
-          body: JSON.stringify({ error: 'Erro ao processar a requisição.' }),
-        };
-      }
-    } else {
-      console.error("Erro ao buscar/atualizar o índice:", error);
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ error: 'Erro ao processar a requisição.' }),
-      };
-    }
+    console.error("Erro ao conectar ou interagir com o MongoDB:", error);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: 'Erro ao processar a requisição com MongoDB.' }),
+    };
+  } finally {
+    await client.close();
   }
 };
