@@ -26,7 +26,7 @@ exports.handler = async (event, context) => {
     const whatsappNumber = whatsappNumbers[nextIndex];
     const message = "Opa! Vim pela Bio do instagram, gostaria de saber mais como vocês podem me ajudar!";
     const encodedMessage = encodeURIComponent(message);
-    const whatsappURL = `https://wa.me/<span class="math-inline">\{whatsappNumber\}?text\=</span>{encodedMessage}`;
+    const whatsappURL = `https://wa.me/${whatsappNumber}?text=${encodedMessage}`;
 
     return {
       statusCode: 302,
