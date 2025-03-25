@@ -1,3 +1,4 @@
 # Local Netlify folder
 .netlify
 /netlify/functions/redirect/node_modules
+.env

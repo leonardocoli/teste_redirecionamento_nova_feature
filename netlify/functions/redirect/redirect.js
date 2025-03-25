@@ -1,3 +1,4 @@
+require('dotenv').config();
 const { MongoClient, ServerApiVersion } = require('mongodb');
 
 const uri = process.env.MONGODB_URI; // Sua string de conexão estará aqui
