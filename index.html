@@ -69,7 +69,7 @@
                     if (response.status === 302) {
                         const redirectTo = response.headers.get('Location');
                         if (redirectTo) {
-                            window.location.href = redirectTo;
+                            window.location.replace(redirectTo);
                         } else {
                             console.error("Header 'Location' não encontrado na resposta.");
                             document.getElementById('redirect-message').textContent = "Erro ao obter o link de redirecionamento.";
