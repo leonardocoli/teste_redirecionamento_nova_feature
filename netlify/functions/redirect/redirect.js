@@ -29,7 +29,8 @@ exports.handler = async (event, context) => {
     if (!whatsappNumber1 || !whatsappNumber2) {
       throw new Error('Variáveis de ambiente dos números do WhatsApp não configuradas.');
     }
-
+    
+    console.log("Valor de currentIndex:", currentIndex);
     let redirectTo = (currentIndex % 2 === 0)
       ? `https://wa.me/${whatsappNumber1}`
       : `https://wa.me/${whatsappNumber2}`;
