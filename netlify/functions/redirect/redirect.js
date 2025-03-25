@@ -13,50 +13,49 @@ const client = new MongoClient(uri, {
 
 exports.handler = async (event, context) => {
   try {
+    console.log("Iniciando função de redirecionamento...");
+    console.log("Conectando ao banco de dados...");
     await client.connect();
+    console.log("Conexão com o banco de dados estabelecida!");
+
     const db = client.db('leads');
     const counterCollection = db.collection('vendor_counter');
+    console.log("Acessando a collection 'vendor_counter'...");
 
-    // Incrementar o índice e garantir que sempre temos um documento válido
     const findResult = await counterCollection.findOneAndUpdate(
-      { type: 'single' }, // Filtro para localizar o documento
-      { $inc: { index: 1 } }, // Incrementar o campo "index"
-      { upsert: true, returnDocument: 'after' } // Criar o documento se ele não existir
+      { type: 'single' }, // Filtro
+      { $inc: { index: 1 } }, // Incremento
+      { upsert: true, returnDocument: 'after' } // Opções
     );
 
-    // Verificar se o índice foi retornado corretamente
-    const currentIndex = findResult.value?.index;
-
-    if (currentIndex === undefined) {
-      throw new Error("Falha ao atualizar ou recuperar o índice.");
+    if (!findResult.value) {
+      console.error("Erro: Nenhum documento encontrado ou criado na coleção.");
+      throw new Error("Documento ausente na coleção.");
     }
 
-    // DEBUG: Logs para verificar a lógica
-    console.log("Resultado do findOneAndUpdate:", findResult);
+    const currentIndex = findResult.value.index;
     console.log("Índice atual:", currentIndex);
 
-    // Configurar os números do WhatsApp
     const whatsappNumber1 = process.env.WHATSAPP_NUMBER_1;
     const whatsappNumber2 = process.env.WHATSAPP_NUMBER_2;
 
     if (!whatsappNumber1 || !whatsappNumber2) {
+      console.error("Erro: Variáveis de ambiente dos números do WhatsApp não configuradas.");
       throw new Error('Variáveis de ambiente dos números do WhatsApp não configuradas.');
     }
 
-    // Alternar entre os dois números com base no índice
     const redirectTo = (currentIndex % 2 === 0)
       ? `https://wa.me/${whatsappNumber1}`
       : `https://wa.me/${whatsappNumber2}`;
 
-    console.log("Redirecionando para:", redirectTo); // Log final para verificar o redirecionamento
+    console.log("Redirecionando para:", redirectTo);
 
-    // Retornar redirecionamento
     return {
       statusCode: 302,
       headers: {
         Location: redirectTo,
       },
-      body: null, // Corpo não é necessário para redirecionamento
+      body: null,
     };
   } catch (error) {
     console.error("Erro na função:", error);
@@ -66,5 +65,6 @@ exports.handler = async (event, context) => {
     };
   } finally {
     await client.close();
+    console.log("Conexão com o MongoDB fechada.");
   }
 };
