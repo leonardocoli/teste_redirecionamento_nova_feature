@@ -16,26 +16,29 @@ exports.handler = async (event, context) => {
     await client.connect();
     const db = client.db('leads');
     const counterCollection = db.collection('vendor_counter');
-
-    // Incrementar o índice e garantir que sempre temos um documento válido
     const findResult = await counterCollection.findOneAndUpdate(
-      { type: 'single' }, // Filtro para localizar o documento
-      { $inc: { index: 1 } }, // Incrementar o campo "index"
-      { upsert: true, returnDocument: 'after' } // Criar o documento se ele não existir
+      { type: 'single' },
+      { $inc: { index: 1 } },
+      { upsert: true, returnDocument: 'after' }
     );
-
-    // Verificar se o índice foi retornado corretamente
-    const currentIndex = findResult.value?.index;
-
-    if (currentIndex === undefined) {
-      throw new Error("Falha ao atualizar ou recuperar o índice.");
-    }
-
-    // DEBUG: Logs para verificar a lógica
+    
+    // Garantir que sempre temos um índice válido.
+    const currentIndex = findResult.value?.index || 1;
+    
+    // DEBUG: Inserindo logs para verificar o estado atual
     console.log("Resultado do findOneAndUpdate:", findResult);
     console.log("Índice atual:", currentIndex);
 
-    // Configurar os números do WhatsApp
+    // Inicializar o índice se ele não existir (caso raro).
+    //if (!findResult.value) {
+    //  await counterCollection.updateOne(
+    //    { type: 'single' },
+    //    { $set: { index: 1 } },
+    //    { upsert: true }
+    //  );
+    //}
+    
+
     const whatsappNumber1 = process.env.WHATSAPP_NUMBER_1;
     const whatsappNumber2 = process.env.WHATSAPP_NUMBER_2;
 
@@ -43,20 +46,18 @@ exports.handler = async (event, context) => {
       throw new Error('Variáveis de ambiente dos números do WhatsApp não configuradas.');
     }
 
-    // Alternar entre os dois números com base no índice
-    const redirectTo = (currentIndex % 2 === 0)
-      ? `https://wa.me/${whatsappNumber1}`
-      : `https://wa.me/${whatsappNumber2}`;
+    let redirectTo = (currentIndex % 2 === 0)
+      ? https://wa.me/${whatsappNumber1}
+      : https://wa.me/${whatsappNumber2};
 
-    console.log("Redirecionando para:", redirectTo); // Log final para verificar o redirecionamento
-
-    // Retornar redirecionamento
+    console.log("Redirecionando para:", redirectTo); // Log final para confirmar o destino
+    
     return {
       statusCode: 302,
       headers: {
         Location: redirectTo,
       },
-      body: null, // Corpo não é necessário para redirecionamento
+      body: null, // Não é necessário corpo para redirecionamento.
     };
   } catch (error) {
     console.error("Erro na função:", error);
