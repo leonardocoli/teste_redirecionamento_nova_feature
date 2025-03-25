@@ -71,9 +71,16 @@
 
             fetch(redirectURL)
                 .then(response => {
-                    if (response.redirected) {
+                    console.log("Response:", response); // Log do objeto de resposta completo
+                    console.log("Response URL:", response.url); // Log da URL da resposta
+                    console.log("Response Status:", response.status); // Log do código de status
+                    console.log("Response Redirected:", response.redirected); // Log da propriedade 'redirected'
+
+                    if (response.status === 302) {
+                        console.log("Redirecionamento automático detectado. URL:", response.url);
                         window.location.href = response.url;
                     } else {
+                        console.log("Redirecionamento automático NÃO detectado. Status:", response.status);
                         return response.text();
                     }
                 })
