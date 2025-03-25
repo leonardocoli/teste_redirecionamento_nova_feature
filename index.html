@@ -62,41 +62,35 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const redirectMessage = document.getElementById('redirect-message');
-            const manualRedirect = document.getElementById('manual-redirect');
-
             const redirectURL = '/.netlify/functions/redirect';
-
-            redirectMessage.textContent = "Redirecionando...";
 
             fetch(redirectURL)
                 .then(response => {
-                    console.log("Response:", response);
-                    console.log("Response URL:", response.url);
-                    console.log("Response Status:", response.status);
-                    console.log("Response Redirected:", response.redirected);
-
                     if (response.status === 302) {
-                        console.log("Redirecionamento automático detectado. URL:", response.url);
-                        window.location.href = response.url;
-                        return; // Importante: sair da função aqui após o redirecionamento
+                        const redirectTo = response.headers.get('Location');
+                        if (redirectTo) {
+                            window.location.href = redirectTo;
+                        } else {
+                            console.error("Header 'Location' não encontrado na resposta.");
+                            document.getElementById('redirect-message').textContent = "Erro ao obter o link de redirecionamento.";
+                            document.getElementById('manual-redirect').style.display = 'inline-block';
+                        }
                     } else {
-                        console.log("Redirecionamento automático NÃO detectado. Status:", response.status);
                         return response.text();
                     }
                 })
                 .then(data => {
+                    const manualRedirect = document.getElementById('manual-redirect');
                     if (data) {
-                        console.log("URL de redirecionamento manual:", data);
                         manualRedirect.href = data;
                         manualRedirect.style.display = 'inline-block';
-                        redirectMessage.textContent = "Houve um problema no redirecionamento automático.";
+                        document.getElementById('redirect-message').textContent = "Houve um problema no redirecionamento automático.";
                     }
                 })
                 .catch(error => {
                     console.error("Erro ao buscar o URL de redirecionamento:", error);
-                    redirectMessage.textContent = "Erro ao redirecionar.";
-                    manualRedirect.style.display = 'inline-block';
+                    document.getElementById('redirect-message').textContent = "Erro ao redirecionar.";
+                    document.getElementById('manual-redirect').style.display = 'inline-block';
                 });
         });
     </script>
