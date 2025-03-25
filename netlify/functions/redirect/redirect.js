@@ -13,24 +13,26 @@ const client = new MongoClient(uri, {
 
 exports.handler = async (event, context) => {
   try {
-    console.log("Iniciando função de redirecionamento...");
+    console.log("Iniciando a função...");
     console.log("Conectando ao banco de dados...");
     await client.connect();
-    console.log("Conexão com o banco de dados estabelecida!");
+    console.log("Conexão estabelecida com sucesso.");
 
     const db = client.db('leads');
     const counterCollection = db.collection('vendor_counter');
-    console.log("Acessando a collection 'vendor_counter'...");
 
+    console.log("Atualizando índice na coleção 'vendor_counter'...");
     const findResult = await counterCollection.findOneAndUpdate(
       { type: 'single' }, // Filtro
       { $inc: { index: 1 } }, // Incremento
       { upsert: true, returnDocument: 'after' } // Opções
     );
 
-    if (!findResult.value) {
-      console.error("Erro: Nenhum documento encontrado ou criado na coleção.");
-      throw new Error("Documento ausente na coleção.");
+    console.log("Resultado do findOneAndUpdate:", findResult);
+
+    if (!findResult.value || typeof findResult.value.index !== 'number') {
+      console.error("Erro: Documento inválido ou índice ausente.");
+      throw new Error("Erro ao recuperar o índice atualizado.");
     }
 
     const currentIndex = findResult.value.index;
@@ -41,7 +43,7 @@ exports.handler = async (event, context) => {
 
     if (!whatsappNumber1 || !whatsappNumber2) {
       console.error("Erro: Variáveis de ambiente dos números do WhatsApp não configuradas.");
-      throw new Error('Variáveis de ambiente dos números do WhatsApp não configuradas.');
+      throw new Error('Números de WhatsApp não configurados nas variáveis de ambiente.');
     }
 
     const redirectTo = (currentIndex % 2 === 0)
@@ -58,13 +60,19 @@ exports.handler = async (event, context) => {
       body: null,
     };
   } catch (error) {
-    console.error("Erro na função:", error);
+    console.error("Erro capturado:", error.message);
+    console.error("Detalhes do erro:", error);
+
     return {
       statusCode: 500,
-      body: JSON.stringify({ message: "Erro interno. Verifique os logs." }),
+      body: JSON.stringify({
+        message: "Erro interno. Verifique os logs para mais detalhes.",
+        error: error.message, // Incluindo mensagem de erro para debug
+      }),
     };
   } finally {
+    console.log("Fechando conexão com o banco de dados...");
     await client.close();
-    console.log("Conexão com o MongoDB fechada.");
+    console.log("Conexão encerrada.");
   }
 };
