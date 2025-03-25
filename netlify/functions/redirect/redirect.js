@@ -21,7 +21,23 @@ exports.handler = async (event, context) => {
       { $inc: { index: 1 } },
       { upsert: true, returnDocument: 'after' }
     );
-    const currentIndex = findResult.value ? findResult.value.index : 1;
+    
+    // Garantir que sempre temos um índice válido.
+    const currentIndex = findResult.value?.index || 1;
+    
+    // DEBUG: Inserindo logs para verificar o estado atual
+    console.log("Resultado do findOneAndUpdate:", findResult);
+    console.log("Índice atual:", currentIndex);
+
+    // Inicializar o índice se ele não existir (caso raro).
+    if (!findResult.value) {
+      await counterCollection.updateOne(
+        { type: 'single' },
+        { $set: { index: 1 } },
+        { upsert: true }
+      );
+    }
+    
 
     const whatsappNumber1 = process.env.WHATSAPP_NUMBER_1;
     const whatsappNumber2 = process.env.WHATSAPP_NUMBER_2;
@@ -34,6 +50,8 @@ exports.handler = async (event, context) => {
       ? `https://wa.me/${whatsappNumber1}`
       : `https://wa.me/${whatsappNumber2}`;
 
+    console.log("Redirecionando para:", redirectTo); // Log final para confirmar o destino
+    
     return {
       statusCode: 302,
       headers: {
@@ -51,4 +69,3 @@ exports.handler = async (event, context) => {
     await client.close();
   }
 };
-
