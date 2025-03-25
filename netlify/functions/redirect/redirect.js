@@ -21,6 +21,15 @@ exports.handler = async (event, context) => {
     const db = client.db('leads');
     const counterCollection = db.collection('vendor_counter');
 
+    // Inicializar o índice se ele não existir (caso raro).
+    //if (!findResult.value) {
+    //  await counterCollection.updateOne(
+    //    { type: 'single' },
+    //    { $set: { index: 1 } },
+    //    { upsert: true }
+    //  );
+    //}
+    
     console.log("Atualizando índice na coleção 'vendor_counter'...");
     const findResult = await counterCollection.findOneAndUpdate(
       { type: 'single' }, // Filtro
