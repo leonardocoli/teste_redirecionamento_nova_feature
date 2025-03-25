@@ -1,4 +1,5 @@
 require('dotenv').config();
+const cors = require('cors');
 const { MongoClient, ServerApiVersion } = require('mongodb');
 
 const uri = process.env.MONGODB_URI;
@@ -12,6 +13,38 @@ const client = new MongoClient(uri, {
 });
 
 exports.handler = async (event, context) => {
+  // Configurações padrão do CORS (permite todas as origens)
+  const corsHandler = cors();
+
+  // Simula um objeto 'req' e 'res' para o middleware cors
+  const req = {
+    headers: event.headers,
+  };
+  const res = {
+    statusCode: 200, // Você pode ajustar o status code conforme necessário
+    headers: {},
+    end: (body) => {
+      // Este é um placeholder para o envio da resposta
+      console.log("Resposta CORS:", res.headers, body);
+    },
+    setHeader: (name, value) => {
+      res.headers[name] = value;
+    },
+  };
+
+  // Executa o middleware cors
+  await new Promise((resolve, reject) => {
+    corsHandler(req, res, (err) => {
+      if (err) {
+        console.error("Erro ao aplicar CORS:", err);
+        reject(err);
+      } else {
+        resolve();
+      }
+    });
+  });
+
+  // Sua lógica de redirecionamento aqui
   try {
     await client.connect();
     const db = client.db('leads');
@@ -30,17 +63,21 @@ exports.handler = async (event, context) => {
     } else {
       redirectTo = `https://wa.me/${whatsappNumber2}`;
     }
+
     return {
       statusCode: 302,
       headers: {
         Location: redirectTo,
+        ...res.headers, // Inclui os headers CORS definidos pelo middleware
       },
+      body: '',
     };
-  } catch (e) {
-    console.error("Erro ao conectar ou interagir com o MongoDB:", e);
+  } catch (error) {
+    console.error("Erro na função:", error);
     return {
       statusCode: 500,
-      body: JSON.stringify({ message: "Erro ao processar sua requisição." }),
+      headers: res.headers, // Inclui os headers CORS mesmo em caso de erro
+      body: JSON.stringify({ message: "Erro ao processar a requisição." }),
     };
   } finally {
     await client.close();
