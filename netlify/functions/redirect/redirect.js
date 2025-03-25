@@ -22,29 +22,33 @@ exports.handler = async (event, context) => {
       { upsert: true, returnDocument: 'after' }
     );
     const currentIndex = findResult.value ? findResult.value.index : 1;
+
     const whatsappNumber1 = process.env.WHATSAPP_NUMBER_1;
     const whatsappNumber2 = process.env.WHATSAPP_NUMBER_2;
-    let redirectTo;
-    if (currentIndex % 2 === 0) {
-      redirectTo = `https://wa.me/${whatsappNumber1}`;
-    } else {
-      redirectTo = `https://wa.me/${whatsappNumber2}`;
+
+    if (!whatsappNumber1 || !whatsappNumber2) {
+      throw new Error('Variáveis de ambiente dos números do WhatsApp não configuradas.');
     }
+
+    let redirectTo = (currentIndex % 2 === 0)
+      ? `https://wa.me/${whatsappNumber1}`
+      : `https://wa.me/${whatsappNumber2}`;
 
     return {
       statusCode: 302,
       headers: {
         Location: redirectTo,
       },
-      body: '',
+      body: null, // Não é necessário corpo para redirecionamento.
     };
   } catch (error) {
     console.error("Erro na função:", error);
     return {
       statusCode: 500,
-      body: JSON.stringify({ message: "Erro ao processar a requisição." }),
+      body: JSON.stringify({ message: "Erro interno. Verifique os logs." }),
     };
   } finally {
     await client.close();
   }
 };
+

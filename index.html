@@ -62,36 +62,7 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const redirectURL = '/.netlify/functions/redirect';
-
-            fetch(redirectURL)
-                .then(response => {
-                    if (response.status === 302) {
-                        const redirectTo = response.headers.get('Location');
-                        if (redirectTo) {
-                            window.location.replace(redirectTo);
-                        } else {
-                            console.error("Header 'Location' não encontrado na resposta.");
-                            document.getElementById('redirect-message').textContent = "Erro ao obter o link de redirecionamento.";
-                            document.getElementById('manual-redirect').style.display = 'inline-block';
-                        }
-                    } else {
-                        return response.text();
-                    }
-                })
-                .then(data => {
-                    const manualRedirect = document.getElementById('manual-redirect');
-                    if (data) {
-                        manualRedirect.href = data;
-                        manualRedirect.style.display = 'inline-block';
-                        document.getElementById('redirect-message').textContent = "Houve um problema no redirecionamento automático.";
-                    }
-                })
-                .catch(error => {
-                    console.error("Erro ao buscar o URL de redirecionamento:", error);
-                    document.getElementById('redirect-message').textContent = "Erro ao redirecionar.";
-                    document.getElementById('manual-redirect').style.display = 'inline-block';
-                });
+            window.location.href = '/.netlify/functions/redirect';
         });
     </script>
 </body>
