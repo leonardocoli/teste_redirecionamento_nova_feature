@@ -24,7 +24,7 @@ exports.handler = async (event, context) => {
       { upsert: true, returnDocument: 'after' }
     );
     console.log("Resultado do findOneAndUpdate:", findResult);
-    const currentIndex = findResult.value ? findResult.value.index : 1;
+    const currentIndex = findResult ? findResult.index : 1;
 
     const whatsappNumber1 = process.env.WHATSAPP_NUMBER_1;
     const whatsappNumber2 = process.env.WHATSAPP_NUMBER_2;
