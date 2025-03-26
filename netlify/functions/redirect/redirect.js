@@ -16,11 +16,14 @@ exports.handler = async (event, context) => {
     await client.connect();
     const db = client.db('leads');
     const counterCollection = db.collection('vendor_counter');
+    const findDocument = await counterCollection.findOne({ type: 'single' });
+    console.log("Resultado do findOne:", findDocument);
     const findResult = await counterCollection.findOneAndUpdate(
       { type: 'single' },
       { $inc: { index: 1 } },
       { upsert: true, returnDocument: 'after' }
     );
+    console.log("Resultado do findOneAndUpdate:", findResult);
     const currentIndex = findResult.value ? findResult.value.index : 1;
 
     const whatsappNumber1 = process.env.WHATSAPP_NUMBER_1;
