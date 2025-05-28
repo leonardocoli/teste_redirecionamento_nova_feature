@@ -4,6 +4,7 @@
     "mongodb": "^6.15.0"
   },
   "devDependencies": {
+    "@types/node": "^22.15.23",
     "dotenv": "^16.4.7"
   }
 }
