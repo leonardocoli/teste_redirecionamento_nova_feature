@@ -1,3 +1,4 @@
+// netlify/functions/redirect/redirect.js
 require('dotenv').config();
 const { MongoClient, ServerApiVersion } = require('mongodb');
 
@@ -16,14 +17,13 @@ exports.handler = async (event, context) => {
     await client.connect();
     const db = client.db('leads');
     const counterCollection = db.collection('vendor_counter');
-    const findDocument = await counterCollection.findOne({ type: 'single' });
-    console.log("Resultado do findOne:", findDocument);
+    const redirectLogsCollection = db.collection('redirect_logs');
+
     const findResult = await counterCollection.findOneAndUpdate(
       { type: 'single' },
       { $inc: { index: 1 } },
       { upsert: true, returnDocument: 'after' }
     );
-    console.log("Resultado do findOneAndUpdate:", findResult);
     const currentIndex = findResult ? findResult.index : 1;
 
     let whatsappNumber1 = process.env.WHATSAPP_NUMBER_1;
@@ -35,7 +35,6 @@ exports.handler = async (event, context) => {
 
     const mensagem = 'Opa%21+Vim+pela+Bio+do+instagram%2C+gostaria+de+saber+mais+como+voces+pod%C3%AAm+me+ajudar.';
 
-    // --- Lógica para desabilitar vendedores por dia da semana ---
     const today = new Date();
     const dayOfWeek = today.getDay(); // 0 for Sunday, 1 for Monday, ..., 6 for Saturday
 
@@ -50,23 +49,42 @@ exports.handler = async (event, context) => {
       activeWhatsappNumbers.push(whatsappNumber2);
     }
 
-    // Handle cases where only one number is active or neither is
     let redirectTo;
+    let assignedVendor; // Variável para registrar qual vendedor foi atribuído e seu status
+
     if (activeWhatsappNumbers.length === 0) {
-      // Fallback if both are disabled (e.g., choose a default or display a message)
-      console.warn("Both WhatsApp numbers are disabled today. Consider a fallback.");
-      // For now, let's just pick one or redirect to a general contact page
-      // You might want to redirect to a "come back later" page or a general support number.
-      redirectTo = `https://wa.me/${whatsappNumber1}?text=Desculpe%2C+no+momento+nao+temos+atendimento.+Por+favor%2C+volte+mais+tarde.`; // Example fallback
-    } else if (activeWhatsappNumbers.length === 1) {
-      redirectTo = `https://wa.me/${activeWhatsappNumbers[0]}?text=${mensagem}`;
-    } else {
-      // Both are active, use the round-robin logic
+      // CENÁRIO: Ambos os vendedores estão de folga (ex: regras futuras, ou se os números não estivessem configurados corretamente e essa validação não fosse um 'throw error').
+      // De acordo com a sua solicitação, neste caso, mantemos a distribuição padrão intercalada.
+      console.warn("Ambos os vendedores estão de folga, mas o lead será distribuído via round-robin padrão.");
       redirectTo = (currentIndex % 2 === 0)
         ? `https://wa.me/${whatsappNumber1}?text=${mensagem}`
         : `https://wa.me/${whatsappNumber2}?text=${mensagem}`;
+      
+      // Registra o status de 'folga' para o vendedor que recebeu o lead
+      assignedVendor = (currentIndex % 2 === 0) ? 'vendor1_off_duty_assigned' : 'vendor2_off_duty_assigned';
+
+    } else if (activeWhatsappNumbers.length === 1) {
+      // CENÁRIO: Apenas um vendedor está ativo (o outro está de folga)
+      redirectTo = `https://wa.me/${activeWhatsappNumbers[0]}?text=${mensagem}`;
+      assignedVendor = (activeWhatsappNumbers[0] === whatsappNumber1) ? 'vendor1_on_duty' : 'vendor2_on_duty';
+    } else { // activeWhatsappNumbers.length === 2
+      // CENÁRIO: Ambos os vendedores estão ativos (dia de semana normal)
+      // Usamos a lógica de round-robin padrão
+      redirectTo = (currentIndex % 2 === 0)
+        ? `https://wa.me/${whatsappNumber1}?text=${mensagem}`
+        : `https://wa.me/${whatsappNumber2}?text=${mensagem}`;
+      assignedVendor = (currentIndex % 2 === 0) ? 'vendor1_on_duty' : 'vendor2_on_duty';
     }
-    // --- Fim da lógica de desabilitar vendedores ---
+
+    // Registra o redirecionamento detalhado
+    await redirectLogsCollection.insertOne({
+      timestamp: new Date(),
+      vendorAssigned: assignedVendor, // Novo status detalhado
+      redirectedTo: redirectTo,
+      // userAgent: event.headers['user-agent'],
+      // ipAddress: event.headers['x-nf-client-ip']
+    });
+    console.log(`Redirecionamento logado: ${assignedVendor}`);
 
     console.log("Valor de currentIndex:", currentIndex);
     console.log("Redirecionando para:", redirectTo);
@@ -76,7 +94,7 @@ exports.handler = async (event, context) => {
       headers: {
         Location: redirectTo,
       },
-      body: null, // Não é necessário corpo para redirecionamento.
+      body: null,
     };
   } catch (error) {
     console.error("Erro na função:", error);
